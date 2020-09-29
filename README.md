@@ -11,5 +11,5 @@ https://www.ncdc.noaa.gov/cdo-web/
 ```
 php overhundred.php
 gnuplot plot.p
-rsvg-convert out.svg -b -o out.png
+rsvg-convert out.svg -o out.png
 ```
