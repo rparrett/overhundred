@@ -3,6 +3,7 @@
 $f = fopen('data.csv', 'r');
 
 $years = [];
+$thresholds = [100, 110];
 
 $header = fgetcsv($f);
 
@@ -13,32 +14,58 @@ while ($row = fgetcsv($f)) {
     $year = $date->format('Y');
 
     if (!isset($years[$year])) {
-        $years[$year] = [
-            $year,
-            0,
-            0,
-            0
+        $init = [
+            'year' => $year,
+            'total' => 0
         ];
+
+        foreach ($thresholds as $threshold) {
+            $init[(string) $threshold] = 0;
+            $init[$threshold . '_streak'] = 0;
+            $init[$threshold . '_max_streak'] = 0;
+        }
+
+        $years[$year] = $init;
     }
 
-    if ($combined['TMAX'] >= 100) {
-        $years[$year][1] += 1;
+    foreach ($thresholds as $threshold) {
+        if ($combined['TMAX'] >= $threshold) {
+            $years[$year][(string) $threshold] += 1;
+            $years[$year][$threshold . '_streak'] += 1;
+
+            if ($years[$year][$threshold . '_streak'] > $years[$year][$threshold . '_max_streak']) {
+                $years[$year][$threshold . '_max_streak'] = $years[$year][$threshold . '_streak'];
+            }
+        } else {
+            $years[$year][$threshold . '_streak'] = 0;
+        }
     }
 
-    if ($combined['TMAX'] >= 110) {
-        $years[$year][2] += 1;
-    }
-
-    $years[$year][3] += 1;
+    $years[$year]['total'] += 1;
 }
 
 fclose($f);
 
 $f = fopen('processed.csv', 'w');
 
-fputcsv($f, ["Year", "at least 100", "at least 110", "total"]);
+$headers = ["Year"];
+foreach ($thresholds as $threshold) {
+    array_push($headers, "At least {$threshold}");
+    array_push($headers, "At least {$threshold} (streak)");
+}
+array_push($headers, "Total");
+
+fputcsv($f, $headers);
 foreach ($years as $year => $nums) {
-    fputcsv($f, $nums);
+    $out = [$nums['year']];
+    foreach ($thresholds as $threshold) {
+        array_push($out, $nums[$threshold]);
+        array_push($out, $nums[$threshold . '_max_streak']);
+    }
+
+    array_push($out, $nums['total']);
+
+    fputcsv($f, $out);
 }
 
 fclose($f);
